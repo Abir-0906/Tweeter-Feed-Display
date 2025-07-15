@@ -2,129 +2,191 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import QRCode from 'react-qr-code';
 import { motion, AnimatePresence } from 'framer-motion';
-import './TweetDisplay.css'; // Create this file (CSS included below)
+import './TweetDisplay.css';
 
-// Predefined Twitter handles to fetch
 const HANDLES = ['elonmusk', 'BillGates', 'NASA', 'Snowden'];
+const TWEET_ROTATION_INTERVAL = 15000; // 15 seconds
+const DATA_REFRESH_INTERVAL = 3600000; // 1 hour
 
 const TweetDisplay = () => {
   const [tweets, setTweets] = useState([]);
   const [currentTweetIndex, setCurrentTweetIndex] = useState(0);
-  const [currentHandle, setCurrentHandle] = useState(HANDLES[1]);
+  const [currentHandle, setCurrentHandle] = useState(HANDLES[0]);
   const [isSecondaryScreen, setIsSecondaryScreen] = useState(false);
   const [error, setError] = useState('');
-  const intervalRef = useRef();
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const rotationIntervalRef = useRef();
+  const refreshIntervalRef = useRef();
 
-  // 1. Detect secondary monitor
+  // Detect secondary monitor
   const checkScreen = () => {
     const windowLeft = window.screenLeft || window.screenX;
     const primaryScreenWidth = window.screen.width;
     setIsSecondaryScreen(windowLeft >= primaryScreenWidth);
   };
 
-  // 2. Fetch tweets from backend API
+  // Enhanced tweet fetching with error handling
   const fetchTweets = async () => {
     try {
-      const res = await axios.get(
-        `http://localhost:5000/api/twitter/tweets/${currentHandle}`
+      setError('');
+      const { data } = await axios.get(
+        `http://localhost:5000/api/twitter/tweets/${currentHandle.toLowerCase()}`,
+        { params: { _: Date.now() } } // Cache busting
       );
-      if (res.data.length > 0) {
-        setTweets(res.data);
-        setError('');
+
+      if (data?.length > 0) {
+        setTweets(data);
+        setCurrentTweetIndex(0);
+        setLastUpdated(new Date());
       } else {
         setError(`No tweets found for @${currentHandle}`);
+        setTweets([]);
       }
     } catch (err) {
+      console.error('Fetch error:', err);
       setError(err.response?.data?.message || 'Failed to fetch tweets');
+      setTweets([]);
     }
   };
 
-  // 3. Auto-rotate tweets with smooth transitions
+  // Enhanced text formatting
+  const formatTweetText = (text) => {
+    if (!text) return '';
+    
+    return text
+      .replace(/https?:\/\/\S+/g, '') // Remove URLs
+      .replace(/\n/g, '<br />') // Preserve line breaks
+      .replace(/@(\w+)/g, '<span class="mention">@$1</span>') // Style mentions
+      .replace(/#(\w+)/g, '<span class="hashtag">#$1</span>') // Style hashtags
+      .replace(/(^|\s)([A-Za-z]+:\/\/[^\s]+)/g, '$1<a href="$2" target="_blank" rel="noopener noreferrer">$2</a>'); // Re-add links as clickable
+  };
+
+  // Start tweet rotation
   const startRotation = () => {
-    intervalRef.current = setInterval(() => {
-      setCurrentTweetIndex((prev) => (prev + 1) % tweets.length);
-    }, 1500000); // Rotate every 15 seconds
+    clearInterval(rotationIntervalRef.current);
+    if (tweets.length > 1) {
+      rotationIntervalRef.current = setInterval(() => {
+        setCurrentTweetIndex(prev => (prev + 1) % tweets.length);
+      }, TWEET_ROTATION_INTERVAL);
+    }
+  };
+
+  // Setup hourly refresh
+  const setupDataRefresh = () => {
+    clearInterval(refreshIntervalRef.current);
+    refreshIntervalRef.current = setInterval(() => {
+      fetchTweets();
+    }, DATA_REFRESH_INTERVAL);
   };
 
   useEffect(() => {
     checkScreen();
     window.addEventListener('resize', checkScreen);
-
     fetchTweets();
-    startRotation();
+    setupDataRefresh();
 
     return () => {
-      clearInterval(intervalRef.current);
+      clearInterval(rotationIntervalRef.current);
+      clearInterval(refreshIntervalRef.current);
       window.removeEventListener('resize', checkScreen);
     };
   }, [currentHandle]);
 
-  // 4. Format tweet text (links, hashtags)
-  const formatTweetText = (text) => {
-    return text
-      .replace(/https?:\/\/\S+/g, '') // Remove URLs
-      .replace(/\n/g, '<br />') // Preserve line breaks
-      .replace(/#(\w+)/g, '<span class="hashtag">#$1</span>'); // Style hashtags
-  };
+  useEffect(() => {
+    startRotation();
+  }, [tweets]);
 
-  if (error) return <div className="error">{error}</div>;
-  if (tweets.length === 0) return <div className="loading">Loading...</div>;
+  if (error) return (
+    <div className="error-screen">
+      <div className="error-message">{error}</div>
+      <button onClick={fetchTweets} className="retry-button">
+        Retry
+      </button>
+    </div>
+  );
+
+  if (tweets.length === 0) return (
+    <div className="loading-screen">
+      <div className="loading-spinner"></div>
+      <p>Loading tweets for @{currentHandle}...</p>
+    </div>
+  );
 
   const currentTweet = tweets[currentTweetIndex];
 
   return (
     <div className={`container ${isSecondaryScreen ? 'secondary-screen' : ''}`}>
-      {/* Handle selector dropdown */}
-      <select
-        className="handle-selector"
-        value={currentHandle}
-        onChange={(e) => setCurrentHandle(e.target.value)}
-      >
-        {HANDLES.map((handle) => (
-          <option key={handle} value={handle}>@{handle}</option>
-        ))}
-      </select>
+      <div className="header-bar">
+        <select
+          className="handle-selector"
+          value={currentHandle}
+          onChange={(e) => setCurrentHandle(e.target.value)}
+        >
+          {HANDLES.map((handle) => (
+            <option key={handle} value={handle}>@{handle}</option>
+          ))}
+        </select>
+        
+        {lastUpdated && (
+          <div className="last-updated">
+            Last updated: {lastUpdated.toLocaleTimeString()}
+          </div>
+        )}
+      </div>
 
-      {/* Animated tweet display */}
-      <AnimatePresence mode='wait'>
+      <AnimatePresence mode="wait">
         <motion.div
           key={currentTweet.tweetId}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 1 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.5 }}
           className="tweet-card"
         >
           <div className="tweet-header">
-            <h2>@{currentTweet.handle}</h2>
-            <p>{new Date(currentTweet.timestamp).toLocaleString()}</p>
+            <h2 className="handle">@{currentTweet.handle}</h2>
+            <p className="timestamp">
+              {new Date(currentTweet.timestamp).toLocaleString()}
+            </p>
           </div>
 
           <div 
-            className="tweet-text"
+            className="tweet-content"
             dangerouslySetInnerHTML={{ __html: formatTweetText(currentTweet.text) }}
           />
 
           {currentTweet.mediaUrl && (
-            <img 
-              src={currentTweet.mediaUrl} 
-              alt="Tweet media" 
-              className="tweet-media"
-            />
+            <div className="media-container">
+              <img 
+                src={currentTweet.mediaUrl} 
+                alt="Tweet media" 
+                className="tweet-media"
+                onError={(e) => e.target.style.display = 'none'}
+              />
+            </div>
           )}
 
-          <div className="qr-container">
+          <div className="qr-footer">
             <QRCode 
               value={currentTweet.url} 
               size={128}
               bgColor="transparent"
-              fgColor="#1DA1F2" // Twitter blue
+              fgColor="#1DA1F2"
+              className="qr-code"
             />
-            <p className="tweet-url">{currentTweet.url}</p>
+            <a 
+              href={currentTweet.url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="tweet-link"
+            >
+              View on Twitter
+            </a>
           </div>
         </motion.div>
       </AnimatePresence>
     </div>
   );
-}
+};
+
 export default TweetDisplay;
