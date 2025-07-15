@@ -13,7 +13,10 @@ const tweetSchema = new mongoose.Schema({
   timestamp: Date,
   media: [String],
   qrCode: String,
-  
+   isDisplayed: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 module.exports = mongoose.model('Tweet', tweetSchema);

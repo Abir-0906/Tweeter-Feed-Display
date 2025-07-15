@@ -57,7 +57,25 @@ const fetchTweetsFromAllHandles = async (req, res) => {
 
   res.status(200).json({ newTweets });
 };
+const getNextTweetToDisplay = async (req, res) => {
+  try {
+    const tweet = await Tweet.findOne({ isDisplayed: false }).sort({ timestamp: 1 });
 
+    if (!tweet) {
+      return res.status(404).json({ message: 'No new tweets to display.' });
+    }
+
+    // Mark as displayed
+    tweet.isDisplayed = true;
+    await tweet.save();
+
+    res.status(200).json(tweet);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: 'Server error while fetching next tweet.' });
+  }
+};
 module.exports = {
   fetchTweetsFromAllHandles,
+  getNextTweetToDisplay
 };
