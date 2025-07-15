@@ -1,9 +1,9 @@
 // backend/controllers/twitterController.js
 const axios = require('axios');
 const Tweet = require('../models/Tweet');
-const handle = require('../models/handle');
+
 const QRCode = require('qrcode');
-//const Handle = require('../models/Handle.js');
+const Handle = require('../models/Handle.js');
 
 const BEARER_TOKEN = process.env.TWITTER_BEARER_TOKEN;
 
@@ -75,7 +75,42 @@ const getNextTweetToDisplay = async (req, res) => {
     res.status(500).json({ error: 'Server error while fetching next tweet.' });
   }
 };
+
+const validateHandle = async (req, res) => {
+  const { username } = req.body;
+
+  try {
+    const response = await axios.get(
+      `https://api.twitter.com/2/users/by/username/${username}`,
+      {
+        headers: {
+          Authorization: `Bearer ${BEARER_TOKEN}`,
+        },
+      }
+    );
+
+    // If valid, save to DB
+    let handle = await Handle.findOne({ username });
+    if (!handle) {
+      handle = new Handle({ username, validated: true });
+    } else {
+      handle.validated = true;
+    }
+
+    await handle.save();
+
+    res.status(200).json({ message: 'Handle validated and saved.', handle });
+
+  } catch (error) {
+    res.status(400).json({
+      message: 'Invalid Twitter handle or not found.',
+      error: error.response?.data || error.message,
+    });
+  }
+};
+
 module.exports = {
   fetchTweetsFromAllHandles,
-  getNextTweetToDisplay
+  getNextTweetToDisplay,
+  validateHandle
 };
