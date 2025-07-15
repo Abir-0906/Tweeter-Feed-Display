@@ -1,15 +1,14 @@
+import React from 'react';
+import TweetDisplay from './pages/TweetDisplay';
 
-import './App.css'
-import TweetDisplay from '../components/TweetDisplay'
 
-function App() {
- 
 
+const App = () => {
   return (
-    <>
+    <div className="App">
       <TweetDisplay/>
-    </>
-  )
-}
+    </div>
+  );
+};
 
-export default App
+export default App;
