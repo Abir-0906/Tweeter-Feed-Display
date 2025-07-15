@@ -2,6 +2,7 @@
 const axios = require('axios');
 const Tweet = require('../models/Tweet');
 const handle = require('../models/handle');
+const QRCode = require('qrcode');
 //const Handle = require('../models/Handle.js');
 
 const BEARER_TOKEN = process.env.TWITTER_BEARER_TOKEN;
@@ -33,16 +34,28 @@ const fetchTweetsFromHandle = async (handle) => {
 };
 
 const fetchTweetsFromAllHandles = async (req, res) => {
-  const handles = await handle.find({ validated: true });
-
-  let allTweets = [];
+  const handles = await Handle.find({ validated: true });
+  let newTweets = [];
 
   for (let handleObj of handles) {
     const tweets = await fetchTweetsFromHandle(handleObj.username);
-    allTweets.push(...tweets);
+
+    for (let tweet of tweets) {
+      const existing = await Tweet.findOne({ tweetId: tweet.tweetId });
+
+      if (!existing) {
+        // Generate QR Code
+        const qrCode = await QRCode.toDataURL(tweet.url);
+        tweet.qrCode = qrCode;
+
+        // Save to DB
+        const saved = await Tweet.create(tweet);
+        newTweets.push(saved);
+      }
+    }
   }
 
-  res.status(200).json({ tweets: allTweets });
+  res.status(200).json({ newTweets });
 };
 
 module.exports = {
