@@ -58,9 +58,10 @@ const fetchTweetsFromAllHandles = async (req, res) => {
   res.status(200).json({ newTweets });
 };
 const getNextTweetToDisplay = async (req, res) => {
+  
   try {
     const tweet = await Tweet.findOne({ isDisplayed: false }).sort({ timestamp: 1 });
-
+       console.log('✅ GET /api/twitter/next-tweet was hit');
     if (!tweet) {
       return res.status(404).json({ message: 'No new tweets to display.' });
     }
