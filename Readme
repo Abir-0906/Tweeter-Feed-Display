@@ -1,0 +1,107 @@
+# 🐦 Twitter Feed Display System with QR Support
+
+A full-stack MERN (MongoDB, Express, React, Node.js) application that displays tweets in full-screen mode from specified Twitter handles. It is built with performance, configurability, and deployment in mind.
+
+---
+
+## 🔥 Features
+
+- Fetches live tweets from Twitter API v2.
+- Rotates tweets at configurable intervals (e.g., every 15s or 90s).
+- Avoids duplicate display using MongoDB.
+- Displays a **QR code** for each tweet to open it on mobile easily.
+- Smooth transitions with **Framer Motion**.
+- Separate configuration for primary and secondary displays.
+- Admin controls for managing handles and tweet fetching.
+- Built-in retry logic and caching (NodeCache) to respect Twitter API rate limits.
+
+---
+
+## 🧪 Technologies Used
+
+- **Frontend**: React + Vite + Axios + QR Code + Framer Motion  
+- **Backend**: Node.js + Express + MongoDB (Mongoose) + NodeCache  
+- **Deployment**: Render (Backend) + Netlify (Frontend)
+
+---
+
+## 🛠️ Environment Variables
+
+### 🔐 Backend `.env`
+
+PORT=5000
+BASE_URL=http://localhost:5000
+MONGODB_URI=enter_your_mongodb_connection_url
+TWITTER_BEARER_TOKEN=enter_your_twitter_bearer_token
+
+shell
+Copy
+Edit
+
+### 🌐 Frontend `.env`
+
+VITE_API_URL=https://tweeter-feed-display-1.onrender.com
+
+yaml
+Copy
+Edit
+
+---
+
+## 🚀 Deployment
+
+- **Frontend (Netlify)**: [https://neon-rugelach-685a13.netlify.app/](https://neon-rugelach-685a13.netlify.app/)
+- **Backend (Render)**: [https://tweeter-feed-display-1.onrender.com](https://tweeter-feed-display-1.onrender.com)
+
+---
+
+## 📁 Folder Structure
+
+root/
+├── backend/
+│ ├── config/
+│ ├── models/
+│ ├── routes/
+│ ├── services/
+│ └── server.js
+├── frontend/
+│ ├── components/
+│ ├── pages/
+│ ├── assets/
+│ └── main.jsx
+
+yaml
+Copy
+Edit
+
+---
+
+## 📸 Tweet Display Logic
+
+- One tweet is fetched and displayed at a time.
+- After display, it is marked `isDisplayed: true` in the database.
+- If no new tweets are available, fallback logic handles it smoothly.
+- Tweets are cached for 1 hour to avoid re-fetching and reduce API cost.
+- QR code is dynamically generated for every tweet URL.
+
+---
+
+## 📌 Setup Instructions
+
+1. Clone the repository.
+2. Add respective `.env` files in both `backend/` and `frontend/`.
+3. Run backend:
+   ```bash
+   cd backend
+   npm install
+   npm start
+Run frontend:
+
+bash
+Copy
+Edit
+cd frontend
+npm install
+npm run dev
+💡 Credits
+Crafted with ❤️ by Abir Banik
