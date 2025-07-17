@@ -13,7 +13,6 @@ connectDB();
 app.use(cors({
   origin: [
     'http://localhost:5173',
-    'https://neon-rugelach-685a13.netlify.app'
   ],
   credentials: true,
 }));

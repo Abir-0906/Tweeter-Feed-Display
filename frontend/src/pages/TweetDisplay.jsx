@@ -4,7 +4,7 @@ import TweetCard from '../components/TweetCard';
 import { fetchTweetsByHandle } from '../services/twitterApi';
 import '../styles/TweetDisplay.css';
 
-const HANDLES = ['elonmusk', 'BillGates', 'NASA', 'Snowden'];
+const HANDLES = ['elonmusk', 'BillGates', 'NASA'];
 const TWEET_DISPLAY_DURATION = 90000;
 const DATA_REFRESH_INTERVAL = 3600000;
 
